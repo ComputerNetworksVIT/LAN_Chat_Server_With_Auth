@@ -11,8 +11,8 @@ def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
 def load_json(path, default): return json.load(open(path)) if os.path.exists(path) else default
 def save_json(path, data): json.dump(data, open(path, "w"), indent=4)
 
-# store all active clients {username: conn}
-clients = {}
+# ---------- GLOBALS ----------
+active_users = {}   # {username: conn}
 
 # ---------- SETUP ----------
 def setup_server():
@@ -30,7 +30,7 @@ def setup_server():
     else:
         print("✅ Setup already completed.\n")
 
-# ---------- LOGIN ----------
+# ---------- ADMIN LOGIN ----------
 def admin_login():
     users = load_json(USERS_PATH, {})
     while True:
@@ -42,18 +42,20 @@ def admin_login():
         print("❌ Invalid credentials.\n")
 
 # ---------- BROADCAST ----------
-def broadcast(msg, sender=None):
-    for user, conn in list(clients.items()):
-        if user != sender:
-            try: conn.send(msg.encode())
-            except: clients.pop(user, None)
+def broadcast(msg, sender_conn=None):
+    for user, conn in list(active_users.items()):
+        if conn != sender_conn:
+            try:
+                conn.send(msg.encode())
+            except:
+                active_users.pop(user, None)
 
 # ---------- CLIENT HANDLER ----------
 def handle_client(conn, addr):
     users = load_json(USERS_PATH, {})
     pending = load_json(PENDING_PATH, {})
-
     conn.send(b"Welcome to the LAN Chat Server.\nType SIGNUP or LOGIN\n")
+
     username = None
 
     try:
@@ -62,7 +64,8 @@ def handle_client(conn, addr):
             if not data:
                 break
             msg = data.decode().strip()
-            if msg.startswith("SIGNUP "):
+
+            if msg.upper().startswith("SIGNUP "):
                 _, user, pw = msg.split(" ", 2)
                 if user in users:
                     conn.send(b"Username already exists.\n")
@@ -72,12 +75,13 @@ def handle_client(conn, addr):
                     pending[user] = {"password": hash_pw(pw)}
                     save_json(PENDING_PATH, pending)
                     conn.send(b"Signup submitted. Wait for admin approval, then try LOGIN.\n")
-                continue  # keep connection open for later login
+                continue  # stay connected
 
-            elif msg.startswith("LOGIN "):
+            elif msg.upper().startswith("LOGIN "):
                 _, user, pw = msg.split(" ", 2)
+                users = load_json(USERS_PATH, {})  # reload (in case admin just approved)
                 if user not in users or users[user]["password"] != hash_pw(pw):
-                    conn.send(b"Invalid credentials.\n")
+                    conn.send(b"Invalid credentials or user not approved.\n")
                 elif user in active_users:
                     conn.send(b"User already logged in elsewhere.\n")
                 else:
@@ -88,6 +92,7 @@ def handle_client(conn, addr):
                     break
             else:
                 conn.send(b"Unknown command. Use SIGNUP or LOGIN.\n")
+
     except:
         pass
 
@@ -110,16 +115,6 @@ def handle_client(conn, addr):
         if username:
             active_users.pop(username, None)
             broadcast(f"📤 {username} left the chat.\n", conn)
-
-clients = []
-
-def broadcast(message, sender=None):
-    for c in clients[:]:
-        try:
-            if c != sender:
-                c.send(message.encode())
-        except:
-            clients.remove(c)
 
 # ---------- SERVER ----------
 def run_server(port):
@@ -167,9 +162,9 @@ def run_server(port):
         while True:
             try:
                 conn, addr = server.accept()
-                clients.append(conn)
                 threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
-            except socket.timeout: continue
+            except socket.timeout: 
+                continue
     except KeyboardInterrupt:
         print("\n🛑 Server shutting down...")
     finally:
