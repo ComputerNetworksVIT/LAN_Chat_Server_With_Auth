@@ -31,7 +31,7 @@ The project also lays groundwork for a **custom STP (Simple Transmission Protoco
   - `/unmute <user>`
   - `/ban <user> [minutes]`
   - `/unban <user>`
-  - `/broadcast <message>`
+  - `/announce <message>` (from server side)
 - 👀 **Active User List** and Join/Leave Notifications
 - 🧵 **Multi-threaded Communication**
 - 🧱 **Console-Based and Lightweight**
@@ -99,7 +99,7 @@ LAN_Chat_Server_With_Auth/
 | `/unmute <user>`         | Remove mute restriction        | Admin |
 | `/ban <user> [minutes]`  | Temporarily ban login          | Admin |
 | `/unban <user>`          | Remove ban restriction         | Admin |
-| `/broadcast <msg>`       | Send server-wide announcement  | Admin |
+| `/announce <msg>`       | Send server-wide announcement  | Admin |
 
 ---
 
