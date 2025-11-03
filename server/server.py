@@ -1,4 +1,4 @@
-import socket, threading, json, os, hashlib
+import socket, threading, json, os, hashlib, time
 
 # ---------- PATHS ----------
 DATA_DIR = "server_data"
@@ -12,8 +12,9 @@ def load_json(path, default): return json.load(open(path)) if os.path.exists(pat
 def save_json(path, data): json.dump(data, open(path, "w"), indent=4)
 
 # ---------- GLOBALS ----------
-active_users = {}   # {username: conn}
-user_roles = {}     # {username: role}
+active_users = {}    # {username: conn}
+user_roles = {}      # {username: role}
+muted_users = {}     # {username: unmute_time (epoch)}
 
 # ---------- SETUP ----------
 def setup_server():
@@ -113,6 +114,14 @@ def handle_client(conn, addr):
                 break
             text = msg.decode().strip()
 
+            # check mute expiration
+            if username in muted_users and time.time() < muted_users[username]:
+                conn.send("🚫 You are muted.\n".encode("utf-8"))
+                continue
+            elif username in muted_users and time.time() >= muted_users[username]:
+                del muted_users[username]
+                conn.send("✅ You have been unmuted.\n".encode("utf-8"))
+
             # --- Command handling ---
             if text == "/help":
                 help_text = (
@@ -120,8 +129,14 @@ def handle_client(conn, addr):
                     "  /help - show this message\n"
                     "  /users - list online users\n"
                     "  @username <msg> - private message\n"
-                    "  exit - disconnect\n\n"
+                    "  exit - disconnect\n"
                 )
+                if role == "admin":
+                    help_text += (
+                        "  /kick <user> - disconnect user\n"
+                        "  /mute <user> <minutes> - mute user (default 5m)\n"
+                    )
+                help_text += "\n"
                 conn.send(help_text.encode())
                 continue
 
@@ -146,9 +161,41 @@ def handle_client(conn, addr):
                     conn.send(f"{prefix}to {target}: {pm}\n".encode())
                 continue
 
+            elif role == "admin" and text.startswith("/kick "):
+                target = text.split(" ", 1)[1]
+                if target not in active_users:
+                    conn.send(b"User not found or offline.\n")
+                else:
+                    try:
+                        active_users[target].send("⚠️ You have been kicked by an admin.\n".encode("utf-8"))
+                        active_users[target].close()
+                    except:
+                        pass
+                    active_users.pop(target, None)
+                    broadcast(f"🚨 {target} was kicked by an admin.\n")
+                    print(f"[Admin Action] {username} kicked {target}")
+                continue
+
+            elif role == "admin" and text.startswith("/mute "):
+                parts = text.split()
+                if len(parts) < 2:
+                    conn.send(b"Usage: /mute <user> <minutes>\n")
+                    continue
+                target = parts[1]
+                duration = int(parts[2]) if len(parts) > 2 else 5
+                if target not in active_users:
+                    conn.send(b"User not found or offline.\n")
+                else:
+                    muted_users[target] = time.time() + (duration * 60)
+                    active_users[target].send(f"🔇 You have been muted for {duration} minute(s).\n".encode())
+                    broadcast(f"🔇 {target} was muted by an admin for {duration} minute(s).\n")
+                    print(f"[Admin Action] {username} muted {target} for {duration}m")
+                continue
+
             else:
                 tag = "[Admin] " if role == "admin" else ""
                 broadcast(f"{tag}{username}: {text}\n", conn)
+
     except:
         pass
     finally:
