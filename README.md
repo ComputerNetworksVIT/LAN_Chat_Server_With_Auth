@@ -3,7 +3,7 @@
 
 ---
 
-````markdown
+
 # 💬 LAN Chat Server with Authentication & Admin Controls
 
 A **real-time LAN chat system** built using **Python sockets**, designed for **authenticated multi-user communication** with **admin moderation tools**.  
@@ -41,7 +41,7 @@ The project also lays groundwork for a **custom STP (Simple Transmission Protoco
 
 ## 🗂️ Folder Structure
 
-```bash
+```
 LAN_Chat_Server_With_Auth/
 │
 ├── server/
