@@ -1,6 +1,10 @@
 {
-    "bmw780": {
-        "password": "e5ee71ab2e5c4952917e1ae0da00375d810989e34ce3b6fa6d5cdba79d2214f9",
+    "bmw": {
+        "password": "27df9ed9a477af0fcfe369c8ef3474a75cebf357d8b421ca40f1de6cfd4cbb06",
         "role": "admin"
+    },
+    "test1": {
+        "password": "1b4f0e9851971998e732078544c96b36c3d01cedf7caa332359d6f1d83567014",
+        "role": "user"
     }
 }
