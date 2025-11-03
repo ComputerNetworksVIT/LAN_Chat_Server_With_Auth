@@ -66,7 +66,11 @@ def handle_client(conn, addr):
             msg = data.decode().strip()
 
             if msg.upper().startswith("SIGNUP "):
-                _, user, pw = msg.split(" ", 2)
+                parts = msg.split(" ", 2)
+                if len(parts) < 3:
+                    conn.send(b"Usage: SIGNUP <username> <password>\n")
+                    continue
+                _, user, pw = parts
                 if user in users:
                     conn.send(b"Username already exists.\n")
                 elif user in pending:
@@ -84,6 +88,7 @@ def handle_client(conn, addr):
                     conn.send(b"Invalid credentials or user not approved.\n")
                 elif user in active_users:
                     conn.send(b"User already logged in elsewhere.\n")
+                    continue
                 else:
                     username = user
                     active_users[user] = conn
