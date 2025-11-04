@@ -161,34 +161,35 @@ def handle_client(conn, addr):
                             # ban expired -> remove and continue with auth
                             banned_users.pop(user, None)
 
-                        users = load_json(USERS_PATH, {})
-                        if user not in users or users[user]["password"] != hash_pw(pw):
-                            conn.send(encode_lantp({
-                                "TYPE": "AUTH_FAIL", "FROM": "SERVER",
-                                "CONTENT": "Invalid credentials or user not approved.\n"
-                            }).encode("utf-8"))
-                        elif user in active_users:
-                            conn.send(encode_lantp({
-                                "TYPE": "AUTH_FAIL", "FROM": "SERVER",
-                                "CONTENT": "User already logged in elsewhere.\n"
-                            }).encode("utf-8"))
-                        else:
-                            username, role = user, users[user]["role"]
-                            active_users[user] = conn
-                            user_roles[user] = role
-                            connected_since[user] = time.time()
-                            last_pong[user] = time.time()   # initialize heartbeat
-                            tag = "[Admin] " if role == "admin" else ""
-                            conn.send(encode_lantp({
-                                "TYPE": "AUTH_OK", "FROM": "SERVER",
-                                "CONTENT": f"✅ Logged in as {tag}{user}. You can now chat.\n"
-                            }).encode("utf-8"))
-                            broadcast({
-                                "TYPE": "SYS", "FROM": "SERVER",
-                                "CONTENT": f"📢 {tag}{user} joined the chat.\n"
-                            }, conn)
-                            log_event(f"{user} ({role}) logged in from {addr[0]}:{addr[1]}")
-                            break
+                    # --- Normal auth ---
+                    users = load_json(USERS_PATH, {})
+                    if user not in users or users[user]["password"] != hash_pw(pw):
+                        conn.send(encode_lantp({
+                            "TYPE": "AUTH_FAIL", "FROM": "SERVER",
+                            "CONTENT": "Invalid credentials or user not approved.\n"
+                        }).encode("utf-8"))
+                    elif user in active_users:
+                        conn.send(encode_lantp({
+                            "TYPE": "AUTH_FAIL", "FROM": "SERVER",
+                            "CONTENT": "User already logged in elsewhere.\n"
+                        }).encode("utf-8"))
+                    else:
+                        username, role = user, users[user]["role"]
+                        active_users[user] = conn
+                        user_roles[user] = role
+                        connected_since[user] = time.time()
+                        last_pong[user] = time.time()   # initialize heartbeat
+                        tag = "[Admin] " if role == "admin" else ""
+                        conn.send(encode_lantp({
+                            "TYPE": "AUTH_OK", "FROM": "SERVER",
+                            "CONTENT": f"✅ Logged in as {tag}{user}. You can now chat.\n"
+                        }).encode("utf-8"))
+                        broadcast({
+                            "TYPE": "SYS", "FROM": "SERVER",
+                            "CONTENT": f"📢 {tag}{user} joined the chat.\n"
+                        }, conn)
+                        log_event(f"{user} ({role}) logged in from {addr[0]}:{addr[1]}")
+                        break
                 else:
                     conn.send(encode_lantp({
                         "TYPE": "SYS", "FROM": "SERVER",

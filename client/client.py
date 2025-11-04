@@ -55,7 +55,6 @@ def recv_msgs(sock, auth_state):
 
                 # Handle login success/failure
                 if mtype == "AUTH_OK":
-                    print("\n✅ " + content)
                     auth_state["ok"] = True
                     continue
                 elif mtype == "AUTH_FAIL":
