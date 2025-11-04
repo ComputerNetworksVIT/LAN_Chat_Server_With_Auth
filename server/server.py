@@ -40,6 +40,7 @@ CONFIG_PATH = os.path.join(DATA_DIR, "server_config.json")
 USERS_PATH = os.path.join(DATA_DIR, "users.json")
 PENDING_PATH = os.path.join(DATA_DIR, "pending.json")
 LOG_DIR = os.path.join(DATA_DIR, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 # ---------- HELPERS ----------
 def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
