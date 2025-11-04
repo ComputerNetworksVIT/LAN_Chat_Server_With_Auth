@@ -3,3 +3,4 @@
 venv/
 server_data/
 protocol/
+logs/

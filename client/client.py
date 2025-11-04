@@ -13,12 +13,28 @@ def decode_lantp(packet):
     if not lines or not lines[0].startswith("LANTP/1.0"):
         return None
     data = {}
+    current_key = None
+    collecting = []
     for line in lines[1:]:
         if line.strip() == "<END>":
             break
-        if ": " in line:
+        if ": " in line and current_key is None:
+            k, v = line.split(": ", 1)
+            if k == "CONTENT":
+                # start multiline content mode
+                current_key = k
+                collecting.append(v)
+            else:
+                data[k] = v
+        elif current_key == "CONTENT":
+            # accumulate multiline CONTENT
+            collecting.append(line)
+        elif ": " in line:
             k, v = line.split(": ", 1)
             data[k] = v
+
+    if collecting:
+        data["CONTENT"] = "\n".join(collecting)
     return data
 
 
@@ -96,7 +112,7 @@ def main():
     # Authentication loop
     start_time = time.time()
     while not auth_state["ok"]:
-        msg = input("> ").strip()
+        msg = input(" ").strip()
         if not msg:
             continue
 

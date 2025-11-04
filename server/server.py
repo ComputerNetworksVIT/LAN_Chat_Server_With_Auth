@@ -26,12 +26,28 @@ def decode_lantp(packet):
     if not lines or not lines[0].startswith("LANTP/1.0"):
         return None
     data = {}
+    current_key = None
+    collecting = []
     for line in lines[1:]:
         if line.strip() == "<END>":
             break
-        if ": " in line:
+        if ": " in line and current_key is None:
+            k, v = line.split(": ", 1)
+            if k == "CONTENT":
+                # start multiline content mode
+                current_key = k
+                collecting.append(v)
+            else:
+                data[k] = v
+        elif current_key == "CONTENT":
+            # accumulate multiline CONTENT
+            collecting.append(line)
+        elif ": " in line:
             k, v = line.split(": ", 1)
             data[k] = v
+
+    if collecting:
+        data["CONTENT"] = "\n".join(collecting)
     return data
 
 # ---------- PATHS ----------
@@ -358,7 +374,7 @@ def handle_client(conn, addr):
 
 
                 # --- Admin: Kick (adds temporary ban) ---
-                elif text.startswith("/kick "):
+                elif text.startswith("/kick"):
                     if role != "admin":
                         conn.send(encode_lantp({
                             "TYPE": "CMD_RESP", "FROM": "SERVER",
@@ -409,7 +425,7 @@ def handle_client(conn, addr):
                     continue
 
                 # --- Admin: Mute ---
-                elif text.startswith("/mute "):
+                elif text.startswith("/mute"):
                     if role != "admin":
                         conn.send(encode_lantp({
                             "TYPE": "CMD_RESP", "FROM": "SERVER",
@@ -450,7 +466,7 @@ def handle_client(conn, addr):
 
 
                 # --- Admin: Unmute ---
-                elif text.startswith("/unmute "):
+                elif text.startswith("/unmute"):
                     if role != "admin":
                         conn.send(encode_lantp({
                             "TYPE": "CMD_RESP", "FROM": "SERVER",
@@ -495,7 +511,7 @@ def handle_client(conn, addr):
 
 
                 # --- Admin: Unban ---
-                elif text.startswith("/unban "):
+                elif text.startswith("/unban"):
                     if role != "admin":
                         conn.send(encode_lantp({
                             "TYPE": "CMD_RESP", "FROM": "SERVER",
@@ -529,7 +545,7 @@ def handle_client(conn, addr):
                     continue
 
                 # --- Admin: Whois ---
-                elif text.startswith("/whois "):
+                elif text.startswith("/whois"):
                     if role != "admin":
                         conn.send(encode_lantp({
                             "TYPE": "CMD_RESP", "FROM": "SERVER",
