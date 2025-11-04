@@ -448,6 +448,50 @@ def handle_client(conn, addr):
                         }).encode("utf-8"))
                     continue
 
+                # --- Admin: Whois ---
+                elif text.startswith("/whois "):
+                    if role != "admin":
+                        conn.send(encode_lantp({
+                            "TYPE": "CMD_RESP", "FROM": "SERVER",
+                            "CONTENT": "🚫 Permission denied."
+                        }).encode("utf-8"))
+                        continue
+
+                    parts = text.split()
+                    if len(parts) < 2:
+                        conn.send(encode_lantp({
+                            "TYPE": "CMD_RESP", "FROM": "SERVER",
+                            "CONTENT": "Usage: /whois <user>\n"
+                        }).encode("utf-8"))
+                        continue
+
+                    target = parts[1]
+                    if target not in active_users:
+                        conn.send(encode_lantp({
+                            "TYPE": "CMD_RESP", "FROM": "SERVER",
+                            "CONTENT": "User not found or offline.\n"
+                        }).encode("utf-8"))
+                        continue
+
+                    addr = active_users[target].getpeername()
+                    role_str = user_roles.get(target, "user")
+                    since = connected_since.get(target, time.time())
+                    elapsed = int(time.time() - since)
+                    mins, secs = divmod(elapsed, 60)
+
+                    conn.send(encode_lantp({
+                        "TYPE": "CMD_RESP",
+                        "FROM": "SERVER",
+                        "CONTENT": (
+                            f"👤 Whois info for {target}:\n"
+                            f"  • IP: {addr[0]}:{addr[1]}\n"
+                            f"  • Role: {role_str}\n"
+                            f"  • Connected: {mins}m {secs}s ago\n"
+                        )
+                    }).encode("utf-8"))
+                    continue
+
+
                 # broadcast messages
                 tag = "[Admin] " if role == "admin" else ""
                 broadcast({
@@ -462,6 +506,7 @@ def handle_client(conn, addr):
             # Clean up user tracking
             active_users.pop(username, None)
             user_roles.pop(username, None)
+            connected_since.pop(username, None)
 
             # Determine admin tag (for display)
             tag = "[Admin] " if role == "admin" else ""
