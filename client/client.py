@@ -87,7 +87,6 @@ def main():
     print("=== LANTP Chat Client ===")
     ip = input("Server IP [127.0.0.1]: ") or "127.0.0.1"
     port = int(input("Port [5555]: ") or "5555")
-    username = input("Enter your username: ").strip()
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -98,11 +97,11 @@ def main():
 
     print("✅ Connected to server.")
     auth_state = {"ok": False}
-    threading.Thread(target=recv_msgs, args=(sock, username, auth_state), daemon=True).start()
+    threading.Thread(target=recv_msgs, args=(sock, auth_state), daemon=True).start()
 
     # --- AUTH LOOP (SIGNUP or LOGIN) ---
+    print("\nAvailable: SIGNUP <user> <pass> | LOGIN <user> <pass>")
     while not auth_state["ok"]:
-        print("\nAvailable: SIGNUP <user> <pass> | LOGIN <user> <pass>")
         msg = input("> ").strip()
         if not msg:
             continue
@@ -111,7 +110,7 @@ def main():
             return
         packet = encode_lantp({
             "TYPE": "AUTH",
-            "FROM": username,
+            "FROM": "CLIENT",
             "CONTENT": msg
         })
         sock.send(packet.encode("utf-8"))
@@ -130,7 +129,7 @@ def main():
                 break
             packet = encode_lantp({
                 "TYPE": "MSG",
-                "FROM": username,
+                "FROM": "CLIENT",
                 "CONTENT": msg
             })
             sock.send(packet.encode("utf-8"))

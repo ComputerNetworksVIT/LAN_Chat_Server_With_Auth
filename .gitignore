@@ -2,3 +2,4 @@
 *.pyc
 venv/
 server_data/
+protocol/
