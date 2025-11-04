@@ -1,6 +1,15 @@
 import socket, threading, json, os, hashlib, time
 from datetime import datetime
 
+# ---------- GLOBALS ----------
+active_users = {}    # {username: conn}
+user_roles = {}      # {username: role}
+muted_users = {}     # {username: unmute_time (epoch)}
+banned_users = {}    # {username: unban_time}
+BAN_DURATION = 10 * 60  # 10 minutes in seconds
+connected_since = {}  # {username: timestamp}
+log_lock = threading.Lock() # global write lock
+
 # ---------- LANTP HELPERS ----------
 def encode_lantp(data):
     lines = ["LANTP/1.0"]
@@ -45,15 +54,6 @@ def log_event(message):
     with log_lock:  # ensure only one thread writes at a time
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(line)
-
-# ---------- GLOBALS ----------
-active_users = {}    # {username: conn}
-user_roles = {}      # {username: role}
-muted_users = {}     # {username: unmute_time (epoch)}
-banned_users = {}    # {username: unban_time}
-BAN_DURATION = 10 * 60  # 10 minutes in seconds
-connected_since = {}  # {username: timestamp}
-log_lock = threading.Lock()
 
 # ---------- SETUP ----------
 def setup_server():
