@@ -9,6 +9,9 @@ banned_users = {}    # {username: unban_time}
 BAN_DURATION = 10 * 60  # 10 minutes in seconds
 connected_since = {}  # {username: timestamp}
 log_lock = threading.Lock() # global write lock
+PING_INTERVAL = 30      # seconds between pings
+PING_TIMEOUT = 90       # seconds before we consider a client dead
+last_pong = {}          # {username: timestamp of last PONG received}
 
 # ---------- LANTP HELPERS ----------
 def encode_lantp(data):
@@ -170,6 +173,7 @@ def handle_client(conn, addr):
                         active_users[user] = conn
                         user_roles[user] = role
                         connected_since[user] = time.time()
+                        last_pong[user] = time.time()   # initialize heartbeat
                         tag = "[Admin] " if role == "admin" else ""
                         conn.send(encode_lantp({
                             "TYPE": "AUTH_OK", "FROM": "SERVER",
@@ -224,6 +228,18 @@ def handle_client(conn, addr):
                         }).encode("utf-8"))
                         # continue processing the message (do not do continue here)
                 
+                # --- Heartbeat handling ---
+                if msg.get("TYPE") == "PONG":
+                    last_pong[username] = time.time()
+                    continue
+                elif msg.get("TYPE") == "PING":
+                    conn.send(encode_lantp({
+                        "TYPE": "PONG",
+                        "FROM": "SERVER",
+                        "CONTENT": ""
+                    }).encode("utf-8"))
+                    continue
+
                 # --- Command handling ---
                 if text == "/help":
                     help_text = (
@@ -624,6 +640,32 @@ def run_server(port):
                 print("Unknown command.")
 
     threading.Thread(target=admin_console, daemon=True).start()
+
+    def ping_all_clients():
+        while True:
+            time.sleep(PING_INTERVAL)
+            now = time.time()
+            for user, conn in list(active_users.items()):
+                try:
+                    # send ping packet
+                    conn.send(encode_lantp({
+                        "TYPE": "PING",
+                        "FROM": "SERVER",
+                        "CONTENT": ""
+                    }).encode("utf-8"))
+
+                    # Check for timeout (no PONG received from client recently)
+                    if user in last_pong and now - last_pong[user] > PING_TIMEOUT:
+                        print(f"[!WARN] {user} timed out (no PONG in {PING_TIMEOUT}s). Disconnecting.")
+                        log_event(f"[TIMEOUT] {user} disconnected (no PONG in {PING_TIMEOUT}s)")
+                        conn.close()
+                        del active_users[user]
+                        del last_pong[user]
+                except:
+                    pass
+
+    threading.Thread(target=ping_all_clients, daemon=True).start()
+
 
     # --- Main connection acceptor loop ---
     try:
