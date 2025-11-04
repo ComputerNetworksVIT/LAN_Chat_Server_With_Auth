@@ -35,11 +35,13 @@ def decode_lantp(packet):
     return data
 
 # ---------- PATHS ----------
-DATA_DIR = "server_data"
+# Always work relative to this file's directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "server_data")
 CONFIG_PATH = os.path.join(DATA_DIR, "server_config.json")
 USERS_PATH = os.path.join(DATA_DIR, "users.json")
 PENDING_PATH = os.path.join(DATA_DIR, "pending.json")
-LOG_DIR = os.path.join(DATA_DIR, "logs")
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ---------- HELPERS ----------
@@ -81,7 +83,7 @@ def admin_login():
         u = input("Admin username: ").strip()
         p = input("Password: ").strip()
         if u in users and users[u]["password"] == hash_pw(p) and users[u]["role"] == "admin":
-            print(f"🔑 Logged in as admin '{u}'.")
+            print(f"\n\n\n🔑 Logged in as admin '{u}'.")
             return u
         print("❌ Invalid credentials.\n")
 
@@ -571,10 +573,14 @@ def run_server(port):
     print(f"🚀 LANTP/1.0 Server running on port {port}. Ctrl+C to stop.")
     print("💻 Admin commands: list_pending | approve <u> | reject <u> | announce <msg> | exit\n")
 
-        # --- Admin console thread ---
+    # --- Admin console thread ---
     def admin_console():
         while True:
-            raw = input("admin> ").strip()
+            try:
+                raw = input("admin> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n[Admin console closed]")
+                break
             if not raw:
                 continue
 
@@ -624,11 +630,11 @@ def run_server(port):
                 if not msg:
                     print("Usage: announce <message>")
                     continue
-                announcement = encode_lantp({
+                announcement = {
                     "TYPE": "SYS",
                     "FROM": "SERVER",
                     "CONTENT": f"[Server Announcement] {msg}"
-                })
+                }
                 print(f"📢 Broadcasted announcement: {msg}")
                 broadcast(announcement)
                 log_event(f"[SERVER ANNOUNCEMENT] {msg}")   
