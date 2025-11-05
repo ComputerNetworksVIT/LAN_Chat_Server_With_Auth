@@ -60,7 +60,9 @@ LANTP_Chat_Server/
 ├── client/
 │   └── client.py         # terminal-based LANTP client
 │
-└── README.md
+├── README.md
+│
+└── LANTP_SPEC.md
 ```
 
 ---

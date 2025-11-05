@@ -1,8 +1,3 @@
-Perfect 😎
-Here’s your **`LANTP_SPEC.md`** — a clean, standalone document describing your protocol in detail.
-You can put it in the project root (same level as `README.md`), and optionally link to it in the README with:
-
-> 🔗 See [`LANTP_SPEC.md`](./LANTP_SPEC.md) for full protocol documentation.
 
 ---
 
